@@ -1,0 +1,79 @@
+{
+  "name": "igateway",
+  "version": "0.0.0",
+  "main": "./dist/igateway.mjs",
+  "module": "./dist/igateway.mjs",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "src"
+  ],
+  "exports": {
+    ".": {
+      "import": "./dist/igateway.mjs",
+      "require": "./dist/igateway.mjs",
+      "type": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "vite build; tsc",
+    "dev": "vite build --watch",
+    "pack": "npm pack --dry-run --pack-destination out out/igateway",
+    "prepack": "pnpm build",
+    "prepare": "vite build",
+    "start": "vite build --watch",
+    "test": "vitest run && npm run test:types",
+    "test:types": "tsc -p ./tsconfig.test.json",
+    "test:watch": "vitest watch",
+    "cy": "cypress open",
+    "cy:run": "cypress run",
+    "cy:browser": "start-server-and-test start http://localhost:5173 cy:run",
+    "typedoc": "typedoc --out docs src/index.ts"
+  },
+  "dependencies": {
+    "history": "5.3.0",
+    "ts-toolbelt": "9.6.0"
+  },
+  "peerDependencies": {
+    "react": ">=16.8.3"
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "5.11.4",
+    "@testing-library/react": "11.1.0",
+    "@testing-library/user-event": "12.1.10",
+    "@types/node": "18.11.19",
+    "@types/react": "18.0.27",
+    "@types/react-dom": "18.0.10",
+    "cypress": "12.5.1",
+    "prettier": "2.8.3",
+    "start-server-and-test": "1.15.2",
+    "ts-node": "10.9.1",
+    "tslib": "2.5.0",
+    "typedoc": "0.23.24",
+    "typescript": "4.9.5",
+    "vite": "4.1.1",
+    "vite-plugin-dts": "1.7.1",
+    "vitest": "0.28.4"
+  },
+  "eslintConfig": {
+    "extends": [
+      "react-app",
+      "react-app/jest"
+    ]
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  },
+  "volta": {
+    "node": "18.13.0"
+  }
+}
