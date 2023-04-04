@@ -8,7 +8,7 @@ export default defineConfig({
         outDir: "./dist",
         lib: {
             name: "igateway",
-            entry: "./src/index.ts",
+            entry: "./src/index.tsx",
             fileName: "igateway",
             formats: ["cjs", "es", "umd"],
         },
