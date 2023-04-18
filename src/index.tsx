@@ -1,71 +1,81 @@
-import React, { CSSProperties, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 
-type Nullable<T> = T | null;
+const useSsr = <T extends () => any>(fn: T) => {
+    const [state, setState] = useState<ReturnType<T> | null>(null);
+    useEffect(() => setState(fn), []);
+    return state;
+};
 
-export const has = <T extends {}, K extends keyof T>(o: T, k: K): k is K => Object.prototype.hasOwnProperty.call(o, k);
+type IframeNativeProps = React.DetailedHTMLProps<React.IframeHTMLAttributes<HTMLIFrameElement>, HTMLIFrameElement>;
 
-export const useListener = <Origin extends string, Listeners extends Record<string, (data: any) => any | Promise<any>>>(
-    origin: Origin,
-    listeners: Listeners
-) => {
-    const ref = useRef(listeners);
+type Actions = { [K in string]: (args: { type: string } & any) => EventReturn };
 
-    useEffect(() => void (ref.current = listeners), [listeners]);
+type Primitives = string | number | null | boolean;
 
+type JsonObject = Record<string, Primitives | Primitives[] | JsonObject[] | {}>;
+
+type EventReturn = Promise<any> | any | void | Promise<void>;
+
+type Generic = { [K: string]: (arg: Record<string, any>) => EventReturn };
+
+type CreateIframeEvents<T extends Record<string, any>> = {
+    [K in keyof T]: (args: { type: T } & T[K]) => EventReturn;
+};
+
+export type IFrameProps<A extends Actions = Generic> = Omit<IframeNativeProps, "src"> & {
+    src: string;
+    actions?: A;
+};
+
+export const IFrame = <T extends Actions>({ actions, ...props }: IFrameProps<T>) => {
+    const origin = useMemo(() => (props.src === "" ? "" : new URL(props.src as string).origin), [props.src]);
+    const actionsRef = useRef<T>(actions ?? ({} as any));
+    const name = useSsr(() => window.location.origin);
+    useEffect(() => void (actionsRef.current = actions ?? ({} as any)), [actions]);
     useEffect(() => {
-        const fn = async (e: MessageEvent<string>) => {
+        const listener = (e: MessageEvent<string>) => {
             if (e.origin !== origin) return;
             const data: any = JSON.parse(e.data);
-            if (!has(ref.current, data.type)) return;
-            await ref.current[data.type](data);
+            const type = data.type;
+            if (typeof actionsRef.current[type] === "function") return actionsRef.current[type]!(data);
         };
-        window.addEventListener("message", fn, false);
-        return () => window.removeEventListener("message", fn, false);
+        window.addEventListener("message", listener, false);
+        return () => window.removeEventListener("message", listener, false);
     }, [origin]);
+    return name ? <iframe {...props} name={name} src={props.src as string} /> : null;
 };
 
-type IframeProps = React.DetailedHTMLProps<React.IframeHTMLAttributes<HTMLIFrameElement>, HTMLIFrameElement>;
+type IframeEvents = CreateIframeEvents<{
+    type: { data: number[] };
+    testing: { data: { a: number[] } };
+}>;
 
-type Primitives = string | null | undefined | boolean | Date | number | bigint;
+const El = (
+    <IFrame
+        src="https://ok.com"
+        actions={{
+            type: (args) => {
+                args.type;
+                args.data;
+            },
+            testing: (args) => {
+                args.data.a;
+            },
+        }}
+    />
+);
 
-type PrimitiveObject<T extends any = any> = {
-    [Key: string]: Primitives | Array<PrimitiveObject<T>> | PrimitiveObject<T>;
-};
-
-type Data<T extends PrimitiveObject = {}> = T & {
-    type: string;
-};
-
-export const useIframeDocument = (src: Nullable<string>) => {
-    const iframe = useRef<HTMLIFrameElement>(null);
-    const [state, setState] = useState(() => ({ loaded: false, style: { height: 0 } as CSSProperties }));
-
-    const dispatcher = useMemo(
-        () =>
-            <T extends Data>(message: string, data: T) =>
-                iframe.current?.contentWindow?.postMessage(JSON.stringify(data), "*"),
-        []
-    );
-
-    const Iframe = useCallback(
-        (props: Omit<IframeProps, "src">) => (
-            <iframe {...props} key={`hook-iframe-${src}`} ref={iframe} hidden={src === null} src={src ?? ""} style={{ ...state.style, ...props }} />
-        ),
-        [src, state]
-    );
-
-    useEffect(() => {
-        if (iframe.current === null) return;
-        iframe.current.addEventListener("load", (event: any) => {
-            const iframe = event.currentTarget;
-            try {
-                const newValue = iframe.contentWindow?.document.body.offsetHeight;
-                if (newValue !== undefined) setState({ loaded: true, style: { height: `${newValue}px` } });
-            } catch (e) {
-                setState({ loaded: true, style: { height: `${window.outerHeight * 2}px` } });
-            }
-        });
-    }, []);
-
-    return { loaded: state.loaded, Iframe, post: dispatcher };
-};
+const Element = (
+    <IFrame<IframeEvents>
+        src="https://ok.com"
+        actions={{
+            type: (args) => {
+                args.type;
+                args.data;
+            },
+            testing: (args) => {
+                args.data.a;
+            },
+        }}
+    />
+);
